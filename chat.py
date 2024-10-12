@@ -108,59 +108,67 @@ async def main():
     }
 
     async with websockets.connect(url, extra_headers=headers) as ws:
-        base64_audio_data = start_recording(debug_save=False)
+        while True:
+            base64_audio_data = start_recording(debug_save=False)
 
-        create_conversation_event = {
-            "type": "conversation.item.create",
-            "item": {
-                "type": "message",
-                "role": "user",
-                "content": [
-                    {
-                        "type": "input_audio",
-                        "audio": base64_audio_data,
-                    }
-                ],
+            create_conversation_event = {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_audio",
+                            "audio": base64_audio_data,
+                        }
+                    ],
+                }
             }
-        }
-        print("Sending audio data...")
-        await ws.send(json.dumps(create_conversation_event))
-        print("Audio data sent.")
+            print("Sending audio data...")
+            await ws.send(json.dumps(create_conversation_event))
+            print("Audio data sent.")
 
-        # Wait for server response
-        async for message in ws:
-            print("Received message:", message)
-            data = json.loads(message)
-            if data["type"] == "conversation.item.created":
-                break
-
-        create_response_event = {
-            "type": "response.create",
-            "response": {
-                "modalities": ["text", "audio"],
-                "instructions": "Please assist the user.",
-            }
-        }
-        print("Requesting response...")
-        await ws.send(json.dumps(create_response_event))
-
-        audio_player = AudioPlayer(channels=1, rate=16000, width=2)  # Adjust these values as needed
-        try:
+            # Wait for server response
             async for message in ws:
-                print("got message", message)
+                print("Received message:", message)
                 data = json.loads(message)
-                if data["type"] == "response.audio.delta":
-                    print("got delta")
-                    audio_chunk = base64.b64decode(data["delta"])
-                    audio_player.play(audio_chunk)
-                elif data["type"] == "response.audio.done":
-                    print("got done")
+                if data["type"] == "conversation.item.created":
                     break
-            
-            # Keep the stream open for a short time after receiving the "done" message
-            await asyncio.sleep(5)
-        finally:
-            audio_player.close()
+
+            create_response_event = {
+                "type": "response.create",
+                "response": {
+                    "modalities": ["text", "audio"],
+                    "instructions": "You are nedabot, a helpful home robot. You are currently in a room with a user. You are tasked with helping the user with their request.",
+                }
+            }
+            print("Requesting response...")
+            await ws.send(json.dumps(create_response_event))
+
+            audio_player = AudioPlayer(channels=1, rate=32000, width=2)  # Adjust these values as needed
+            try:
+                async for message in ws:
+                    print("got message", message)
+                    data = json.loads(message)
+                    if data["type"] == "response.audio.delta":
+                        print("got delta")
+                        audio_chunk = base64.b64decode(data["delta"])
+                        audio_player.play(audio_chunk)
+                    elif data["type"] == "response.audio.done":
+                        print("got done")
+                        break
+                
+                # Keep the stream open for a short time after receiving the "done" message
+                await asyncio.sleep(5)
+            finally:
+                audio_player.close()
+
+            # print("\nPress Enter to continue chatting or type 'exit' to end the conversation.")
+            # user_input = input().strip().lower()
+            # if user_input == 'exit':
+            #     break
+
+    print("Conversation ended.")
 
 if __name__ == "__main__":
     asyncio.run(main())

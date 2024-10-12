@@ -1,1 +1,27 @@
 node_modules
+
+# Python virtual environment
+venv/
+env/
+.venv/
+.env/
+bot/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Python distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Environment variables
+.env
+
+# Logs
+*.log

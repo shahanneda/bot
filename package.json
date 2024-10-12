@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "audio-decode": "^2.2.2",
+    "dotenv": "^16.4.5",
+    "node-record-lpcm16": "^1.0.1",
+    "speaker": "^0.5.5",
+    "ws": "^8.18.0"
+  }
+}

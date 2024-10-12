@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 import sys
 import subprocess
 import select
+import time
 
 # Load the .env file into memory so the code has access to the key
 load_dotenv()
@@ -100,6 +101,9 @@ class AudioPlayer:
             self.stream.close()
         self.p.terminate()
 
+    def get_buffer_duration(self):
+        return len(self.buffer) / (self.channels * self.width * self.rate)
+
 async def main():
     url = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01"
     headers = {
@@ -130,7 +134,7 @@ async def main():
 
             # Wait for server response
             async for message in ws:
-                print("Received message:", message)
+                # print("Received message:", message)
                 data = json.loads(message)
                 if data["type"] == "conversation.item.created":
                     break
@@ -139,7 +143,7 @@ async def main():
                 "type": "response.create",
                 "response": {
                     "modalities": ["text", "audio"],
-                    "instructions": "You are nedabot, a helpful home robot. You are currently in a room with a user. You are tasked with helping the user with their request.",
+                    "instructions": "You are neda-bot, a helpful home robot. You are currently in a room with a user. You are tasked with helping the user with their request. Keep your responses concise and to the point. Be a little sarcastic and funny, but not too much. Dont say that you are sarcastic. Make sure to say your name in your introduction.",
                 }
             }
             print("Requesting response...")
@@ -147,19 +151,40 @@ async def main():
 
             audio_player = AudioPlayer(channels=1, rate=32000, width=2)  # Adjust these values as needed
             try:
+                total_audio_duration = 0
+                start_time = None
                 async for message in ws:
-                    print("got message", message)
+                    # print("got message", message)
                     data = json.loads(message)
                     if data["type"] == "response.audio.delta":
                         print("got delta")
                         audio_chunk = base64.b64decode(data["delta"])
+                        if start_time is None:
+                            start_time = time.time()
                         audio_player.play(audio_chunk)
+                        print("width: ", audio_player.width)
+                        print("channels: ", audio_player.channels)
+                        print("rate: ", audio_player.rate)
+                        print("chunk length: ", len(audio_chunk))
+                        chunk_duration = len(audio_chunk) / (audio_player.channels * audio_player.width * audio_player.rate)
+                        print("chunk duration is", chunk_duration, "seconds")
+                        total_audio_duration += chunk_duration
+                        print("total audio duration is", total_audio_duration, "seconds")
                     elif data["type"] == "response.audio.done":
                         print("got done")
                         break
                 
-                # Keep the stream open for a short time after receiving the "done" message
-                await asyncio.sleep(5)
+                # Calculate remaining playback time
+                elapsed_time = time.time() - start_time
+                print("total audio duration is", total_audio_duration, "seconds")
+                print("elapsed time is", elapsed_time, "seconds")
+                remaining_buffer_duration = audio_player.get_buffer_duration()
+                print("remaining buffer duration is", remaining_buffer_duration, "seconds")
+                remaining_playback_time = max(0, total_audio_duration - elapsed_time)
+                print("remaining playback time is", remaining_playback_time, "seconds")
+                sleep_time = remaining_playback_time * 1.07
+                print(f"Sleeping for {sleep_time:.2f} seconds")
+                await asyncio.sleep(sleep_time)
             finally:
                 audio_player.close()
 

@@ -154,7 +154,7 @@ async def main():
                 total_audio_duration = 0
                 start_time = None
                 async for message in ws:
-                    # print("got message", message)
+                    print("got message", message)
                     data = json.loads(message)
                     if data["type"] == "response.audio.delta":
                         print("got delta")

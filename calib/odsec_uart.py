@@ -91,8 +91,10 @@ class ODESC:
         try:
             # Remove any non-numeric characters (like 'd' for decimal)
             cleaned_response = ''.join(c for c in response if c.isdigit())
+            print(f"Cleaned response: {cleaned_response}")
             return int(cleaned_response) != 0
         except ValueError:
+            print(response)
             print(f"Unexpected response format: {response}")
             return True  # Assume there's an error if we can't parse the response
 
@@ -101,7 +103,7 @@ class ODESC:
         self.send_command(f'w axis{self.axis_num}.requested_state {self.AXIS_STATE_CLOSED_LOOP_CONTROL}')
 
 if __name__ == '__main__':
-    motor1 = ODESC('/dev/ttyAMA0', axis_num=0, dir=-1)
+    motor1 = ODESC('/dev/ttyAMA1', axis_num=0, dir=-1)
     motor2 = ODESC('/dev/ttyAMA1', axis_num=1, dir=1)
     motor1.start()
     motor2.start()
